@@ -16,18 +16,28 @@ args = CommonArguments(
     )
 )
 args.info_args()
+# 세종태그셋(2005)
+# "NNG", "NNP", "NNB", "NP", "NR", "XR", "XPN", "XSN", "XSV", "XSA",  //10
+# "VV", "VA", "VX", "VCP", "VCN", "ETM", "ETN", "EP", "EF", "EC",     //10
+# "MM", "JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JX", "JC",  //10
+# "IC", "SH", "SL", "SN", "SS", "SP", "SF", "SE", "SO", "SW",         //10
+# "MAG", "MAJ"                                                        //2
 
 tag_groups = {
-    "명사": ["NNG", "NNP", "NNB"],
+    "명사": ["NNG", "NNP"],
     "대명사": ["NP"],
+    "의존명사": ["NNB"],
     "수사": ["NR"],
     "동사": ["VV"],
     "형용사": ["VA"],
     "관형사": ["MM"],
-    "부사": ["MAG"],
+    "일반부사": ["MAG"],
+    "접속부사": ["MAJ"],
     "감탄사": ["IC"],
-    "조사": ["JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JKQ", "JC"],
-    "어미": ["EP", "EF", "EC", "ETN", "ETM"],
+    "조사": ["JKS", "JKC", "JKG", "JKO", "JKB", "JKV", "JX", "JC"],
+    "인용격조사": ["JKQ"],
+    "어미": ["EP", "EF", "ETN", "ETM"],
+    "연결어미": ["EC"],
 }
 
 
@@ -45,11 +55,13 @@ def analyze_text(text, req_id, api_url):
     if r["request_id"] == req_id:
         doc = r["return_object"]["json"]
     tag_values = {k: [] for k in tag_groups.keys()}
+    all_values = []
     for sent in doc["sentence"]:
         ms = [(m["lemma"], m["type"]) for m in sent["morp"]]
+        all_values.extend([f"{l}/{t}" for l, t in ms])
         for group, members in tag_groups.items():
             tag_values[group].extend([f"{l}/{t}" for l, t in ms if t in members])
-    return tag_values
+    return tag_values, all_values
 
 
 def process_file(input_file, output_file, api_url, max_rows=3):
@@ -68,8 +80,11 @@ def process_file(input_file, output_file, api_url, max_rows=3):
                 text = ""
             assert isinstance(text, str), f"Invalid type: {type(text)} [text={text}]"
             text = text.strip()
-            tag_values = analyze_text(text, f"{sid}-{column}", api_url)
-            output = {"번호": sid, "이름": name, "대상": column, "내용": text}
+            tag_values, all_values = analyze_text(text, f"{sid}-{column}", api_url)
+            output = {
+                "번호": sid, "이름": name, "대상": column, "내용": text,
+                "전체": ", ".join(all_values),
+            }
             for group, values in tag_values.items():
                 output[group] = ", ".join(values)
             outputs.append(output)
