@@ -25,16 +25,18 @@ def dataframe_to_list(data, col):
     return result_list
 
 
-def dataframe_to_dict(data, contents_columns):
+def dataframe_to_dict(data, label_columns, text_columns):
     result_dict = {}
     for idx, row in data.iterrows():
-        row_dict = {col: row[col] for col in contents_columns if pd.notna(row[col])}
+        row_dict = dict()
+        row_dict.update({col: row[col] for col in label_columns})
+        row_dict.update({col: row[col] for col in text_columns if pd.notna(row[col])})
         if row_dict:
             result_dict[idx] = row_dict
     return result_dict
 
 
-def korean_analysis(text, level="WSD", netloc="localhost:7100"):
+def korean_analysis(text, level="MORPH", netloc="localhost:7100"):
     url = f"http://{netloc}/interface/lm_interface"
     arg = {
         "request_id": "req01",
@@ -63,14 +65,14 @@ def korean_analysis(text, level="WSD", netloc="localhost:7100"):
 
 def vocab_raw_to_analized(vocab_raw):
     vocab_res = []
-    for expr1 in vocab_raw:
-        units = []
-        for s in korean_analysis(expr1, level="WSD"):
-            for w in s:
-                units.append(w)
-        expr2 = ' '.join(units)
-        expr2 = re.sub(r' 다/EF$', '', expr2)
-        vocab_res.append(expr2)
+    # for expr1 in vocab_raw:
+    #     units = []
+    #     for s in korean_analysis(expr1, level="WSD"):
+    #         for w in s:
+    #             units.append(w)
+    #     expr2 = ' '.join(units)
+    #     expr2 = re.sub(r' 다/EF$', '', expr2)
+    #     vocab_res.append(expr2)
     for expr1 in vocab_raw:
         units = []
         for s in korean_analysis(expr1, level="MORPH"):
@@ -84,15 +86,17 @@ def vocab_raw_to_analized(vocab_raw):
     return vocab_res
 
 
+def wsd_to_text(wsd):
+    return ''.join(w.split('/')[0] for w in wsd.split())
+
+
 if __name__ == '__main__':
     vocab_neg_raw_file = "data/Emotional-Vocab-Neg.xlsx"
     vocab_pos_raw_file = "data/Emotional-Vocab-Pos.xlsx"
     vocab_neg_wsd_file = "data/Emotional-Vocab-Neg-anal.xlsx"
     vocab_pos_wsd_file = "data/Emotional-Vocab-Pos-anal.xlsx"
 
-    input_file = "data/Emotional-Writing.xlsx"
-    output_file = "data/Emotional-Writing-Analysis.xlsx"
-
+    # read vocab
     if not os.path.exists(vocab_neg_wsd_file):
         vocab_neg = pd.read_excel(vocab_neg_raw_file)
         vocab_neg = vocab_neg.set_index("순번")
@@ -104,6 +108,7 @@ if __name__ == '__main__':
     else:
         vocab_neg_wsd = pd.read_excel(vocab_neg_wsd_file)
         vocab_neg_wsd = vocab_neg_wsd.set_index("번호")
+    vocab_neg_wsd = dataframe_to_list(vocab_neg_wsd, "어휘")
 
     if not os.path.exists(vocab_pos_wsd_file):
         vocab_pos = pd.read_excel(vocab_pos_raw_file)
@@ -116,18 +121,40 @@ if __name__ == '__main__':
     else:
         vocab_pos_wsd = pd.read_excel(vocab_pos_wsd_file)
         vocab_pos_wsd = vocab_pos_wsd.set_index("번호")
+    vocab_pos_wsd = dataframe_to_list(vocab_pos_wsd, "어휘")
 
+    input_file = "data/Emotional-Writing.xlsx"
+    output_file = "data/Emotional-Writing-Analysis.xlsx"
 
     # read data
     dataframe = pd.read_excel(input_file)
-    contents_columns = ["긍정 경험 글", "부정 경험 글", "경험 인식 글", "긍정 경험", "부정 경험"]
-    dataframe = dataframe.set_index("번호")
-    datadict = dataframe_to_dict(dataframe, contents_columns)
+    text_columns = ["긍정 경험 글", "부정 경험 글", "경험 인식 글", "긍정 경험", "부정 경험"]
+    label_columns = ["이름"]
 
-    for idx, row in datadict.items():
+    dataframe = dataframe.set_index("번호")
+    datadict = dataframe_to_dict(dataframe, label_columns, text_columns)
+
+    for idx, row in list(datadict.items())[:2]:
         print(f"Processing {idx}...")
-        for col in contents_columns:
+        for col in text_columns:
             if col in row:
                 text = row[col]
-                result = korean_analysis(text)
-                row[f"{col} (result)"] = result
+                text_anal = '\n'.join(' '.join(sent) for sent in korean_analysis(text, level="MORPH"))
+                neg_counts = {}
+                pos_counts = {}
+                # print(result)
+                for sent in text_anal.split('\n'):
+                    for voca in vocab_neg_wsd:
+                        neg_counts[voca] = neg_counts.get(voca, 0) + sent.count(voca)
+                    for voca in vocab_pos_wsd:
+                        pos_counts[voca] = pos_counts.get(voca, 0) + sent.count(voca)
+                neg_counts = ', '.join(f"{wsd_to_text(k)}({v})" for k, v in sorted(neg_counts.items(), key=lambda item: item[1], reverse=True) if v != 0)
+                pos_counts = ', '.join(f"{wsd_to_text(k)}({v})" for k, v in sorted(pos_counts.items(), key=lambda item: item[1], reverse=True) if v != 0)
+                # row[f"{col} (anal)"] = text_anal
+                row[f"{col} (pos)"] = pos_counts
+                row[f"{col} (neg)"] = neg_counts
+        for k, v in row.items():
+            # print(k)
+            print(f"{k}: {v}")
+            print("-" * 80)
+        # exit(1)
