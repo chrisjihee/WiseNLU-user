@@ -56,25 +56,33 @@ def korean_analysis(text, level="MORPH", netloc="localhost:7100"):
                 sent_morps = [f"{x['lemma']}/{x['type']}" for x in sentence["morp"]]
                 sentences.append(sent_morps)
             if level == "WSD":
-                sent_words = [f"{x['text']}/{x['type']}" for x in sentence["WSD"]]
-                # sent_words = [f"{x['text']}/{x['type']}" if x['scode'] == '00' else f"{x['text']}/{x['type']}-{x['scode']}" for x in sentence["WSD"]]
+                # sent_words = [f"{x['text']}/{x['type']}" for x in sentence["WSD"]]
+                sent_words = [f"{x['text']}/{x['type']}" if x['scode'] == '00' else f"{x['text']}[{x['scode']}]/{x['type']}" for x in sentence["WSD"]]
                 sentences.append(sent_words)
         return sentences
     else:
         assert False, f"Failed to get response from the server: URL = {url} / status = {f.status} {f.reason}"
 
 
-def vocab_raw_to_analized(vocab_raw):
+def vocab_raw_to_analized(vocab_raw, level):
     vocab_res = []
     for expr1 in vocab_raw:
         units = []
-        for s in korean_analysis(expr1, level="MORPH"):
-            for w in s:
-                units.append(w)
-        expr2 = ' '.join(units)
-        expr2 = re.sub(' 다/EF$', '', expr2)
-        expr2 = re.sub(' 하/XS[AV]$', '', expr2)
-        vocab_res.append(expr2)
+        if level == "MORPH":
+            for s in korean_analysis(expr1, level="MORPH"):
+                for w in s:
+                    units.append(w)
+            expr2 = ' '.join(units)
+            expr2 = re.sub(' 다/EF$', '', expr2)
+            expr2 = re.sub(' 하/XS[AV]$', '', expr2)
+            vocab_res.append(expr2)
+        if level == "WSD":
+            for s in korean_analysis(expr1, level="WSD"):
+                for w in s:
+                    units.append(w)
+            expr2 = ' '.join(units)
+            expr2 = re.sub(r' 다/EF$', '', expr2)
+            vocab_res.append(expr2)
     vocab_res = sorted(set(vocab_res))
     return vocab_res
 
@@ -94,7 +102,7 @@ if __name__ == '__main__':
         vocab_neg = pd.read_excel(vocab_neg_raw_file)
         vocab_neg = vocab_neg.set_index("순번")
         vocab_neg = dataframe_to_list(vocab_neg, "어휘")
-        vocab_neg_wsd = vocab_raw_to_analized(vocab_neg)
+        vocab_neg_wsd = vocab_raw_to_analized(vocab_neg, level="WSD")
         vocab_neg_wsd = pd.DataFrame(vocab_neg_wsd, columns=["어휘"])
         vocab_neg_wsd = vocab_neg_wsd.set_index(pd.Index(range(1, len(vocab_neg_wsd) + 1), name="번호"))
         vocab_neg_wsd.to_excel(vocab_neg_wsd_file)
@@ -107,7 +115,7 @@ if __name__ == '__main__':
         vocab_pos = pd.read_excel(vocab_pos_raw_file)
         vocab_pos = vocab_pos.set_index("순번")
         vocab_pos = dataframe_to_list(vocab_pos, "어휘")
-        vocab_pos_wsd = vocab_raw_to_analized(vocab_pos)
+        vocab_pos_wsd = vocab_raw_to_analized(vocab_pos, level="WSD")
         vocab_pos_wsd = pd.DataFrame(vocab_pos_wsd, columns=["어휘"])
         vocab_pos_wsd = vocab_pos_wsd.set_index(pd.Index(range(1, len(vocab_pos_wsd) + 1), name="번호"))
         vocab_pos_wsd.to_excel(vocab_pos_wsd_file)
@@ -133,7 +141,7 @@ if __name__ == '__main__':
         for col in text_columns:
             if col in row:
                 text = row[col]
-                text_anal = '\n'.join(' '.join(sent) for sent in korean_analysis(text, level="MORPH"))
+                text_anal = '\n'.join(' '.join(sent) for sent in korean_analysis(text, level="WSD"))
                 neg_counts = {}
                 pos_counts = {}
                 # print(result)
