@@ -1,4 +1,5 @@
 from urllib.request import urlopen
+from tqdm import tqdm
 
 from chrisbase.data import *
 from chrisbase.io import *
@@ -126,8 +127,9 @@ if __name__ == '__main__':
     dataframe = dataframe.set_index("번호")
     datadict = dataframe_to_dict(dataframe, label_columns, text_columns)
 
-    for idx, row in list(datadict.items())[:2]:
-        print(f"Processing {idx}...")
+    # for idx, row in list(datadict.items())[:10]:
+    for idx, row in tqdm(datadict.items(), desc="processing student texts"):
+        # print(f"Processing {idx}...")
         for col in text_columns:
             if col in row:
                 text = row[col]
@@ -142,17 +144,21 @@ if __name__ == '__main__':
                         pos_counts[voca] = pos_counts.get(voca, 0) + sent.count(voca)
                 neg_counts = ', '.join(f"{wsd_to_text(k)}({v})" for k, v in sorted(neg_counts.items(), key=lambda item: item[1], reverse=True) if v != 0)
                 pos_counts = ', '.join(f"{wsd_to_text(k)}({v})" for k, v in sorted(pos_counts.items(), key=lambda item: item[1], reverse=True) if v != 0)
-                # row[f"{col} (anal)"] = text_anal
+                row[f"{col} (anal)"] = text_anal
                 row[f"{col} (pos)"] = pos_counts
                 row[f"{col} (neg)"] = neg_counts
 
     # dict to dataframe
     result_df = pd.DataFrame.from_dict(datadict, orient='index')
-
-    # save to excel
+    result_df = result_df.set_index(pd.Index(range(1, len(result_df) + 1), name="번호"))
+    result_df = result_df[
+        [
+            "이름",
+            "긍정 경험 글", "긍정 경험 글 (anal)", "긍정 경험 글 (pos)", "긍정 경험 글 (neg)",
+            "부정 경험 글", "부정 경험 글 (anal)", "부정 경험 글 (pos)", "부정 경험 글 (neg)",
+            "경험 인식 글", "경험 인식 글 (anal)", "경험 인식 글 (pos)", "경험 인식 글 (neg)",
+            "긍정 경험", "긍정 경험 (anal)", "긍정 경험 (pos)", "긍정 경험 (neg)",
+            "부정 경험", "부정 경험 (anal)", "부정 경험 (pos)", "부정 경험 (neg)",
+        ]
+    ]
     result_df.to_excel(output_file)
-
-    for k, v in datadict[2].items():
-        # print(k)
-        print(f"{k}: {v}")
-        print("-" * 80)
