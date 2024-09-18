@@ -65,14 +65,6 @@ def korean_analysis(text, level="MORPH", netloc="localhost:7100"):
 
 def vocab_raw_to_analized(vocab_raw):
     vocab_res = []
-    # for expr1 in vocab_raw:
-    #     units = []
-    #     for s in korean_analysis(expr1, level="WSD"):
-    #         for w in s:
-    #             units.append(w)
-    #     expr2 = ' '.join(units)
-    #     expr2 = re.sub(r' 다/EF$', '', expr2)
-    #     vocab_res.append(expr2)
     for expr1 in vocab_raw:
         units = []
         for s in korean_analysis(expr1, level="MORPH"):
@@ -153,8 +145,14 @@ if __name__ == '__main__':
                 # row[f"{col} (anal)"] = text_anal
                 row[f"{col} (pos)"] = pos_counts
                 row[f"{col} (neg)"] = neg_counts
-        for k, v in row.items():
-            # print(k)
-            print(f"{k}: {v}")
-            print("-" * 80)
-        # exit(1)
+
+    # dict to dataframe
+    result_df = pd.DataFrame.from_dict(datadict, orient='index')
+
+    # save to excel
+    result_df.to_excel(output_file)
+
+    for k, v in datadict[2].items():
+        # print(k)
+        print(f"{k}: {v}")
+        print("-" * 80)
