@@ -1,6 +1,3 @@
-from pandas import read_excel
-import json
-from sys import argv
 from urllib.request import urlopen
 
 from chrisbase.data import *
@@ -69,3 +66,4 @@ if __name__ == '__main__':
             if col in row:
                 text = row[col]
                 result = korean_analysis(text)
+                row[f"{col} (result)"] = result
