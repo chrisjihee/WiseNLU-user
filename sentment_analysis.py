@@ -56,8 +56,8 @@ def korean_analysis(text, level="MORPH", netloc="localhost:7100"):
                 sent_morps = [f"{x['lemma']}/{x['type']}" for x in sentence["morp"]]
                 sentences.append(sent_morps)
             if level == "WSD":
-                # sent_words = [f"{x['text']}/{x['type']}" for x in sentence["WSD"]]
-                sent_words = [f"{x['text']}/{x['type']}" if x['scode'] == '00' else f"{x['text']}[{x['scode']}]/{x['type']}" for x in sentence["WSD"]]
+                sent_words = [f"{x['text']}/{x['type']}" for x in sentence["WSD"]]
+                # sent_words = [f"{x['text']}/{x['type']}" if x['scode'] == '00' else f"{x['text']}[{x['scode']}]/{x['type']}" for x in sentence["WSD"]]
                 sentences.append(sent_words)
         return sentences
     else:
