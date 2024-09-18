@@ -4,14 +4,12 @@ wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforg
 bash Miniforge3-$(uname)-$(uname -m).sh
 
 # basic
-mamba create -n WiseNLU-user python=3.11 -y
-mamba activate WiseNLU-user
-pip install -r requirements.txt
+mamba create -n WiseNLU-user python=3.11 -y; mamba activate WiseNLU-user
+pip install -U -r requirements.txt
 
 # chrisbase
-rm -rf chrisbase*
-git clone https://github.com/chrisjihee/chrisbase.git
-pip install --editable chrisbase*
+rm -rf chrisbase*; git clone git@github.com:chrisjihee/chrisbase.git
+pip install -U -e chrisbase*
 
 # list
-pip list | grep -E "chris"
+pip list | grep -E "langchain|transformers|torch|faiss|groq|replicate|together|openai|chris"
